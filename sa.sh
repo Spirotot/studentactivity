@@ -46,7 +46,11 @@ do
             TIMESTAMP="$2"
             shift
             ;;
-        -a|--alphabetical) # Sort output alphabetically, or not. (Summary view must be alphabetical)
+        -m|--mapping)           # Path to a mapping file which will be used to display an alternate string instead
+            MAPPING="$2"        # of the username.
+            shift
+            ;;
+        -a|--alphabetical) # Sort output alphabetically, or not. (Summary view is alphabetical by default)
             ALPHABETICAL=1
             ;;
         -n|--nologin) # Show users who have *not* logged in
@@ -90,7 +94,6 @@ if [ ! X$USERSTART = X -o ! X$USEREND = X ]; then
         exit 1
     fi
 
-
     # Check to see if lengths of variables are the same.
     if [ ! ${#USERSTART} = ${#USEREND} ]; then
         echo "Length of 'start' and 'end' differ, or you did not provide a value for one of the arguments."
@@ -106,14 +109,13 @@ fi
 
 #echo "SEQUENCELEN=$SEQUENCELEN"
 
-
-if [ X$LASTFILE = X ]; then
+if [ X"$LASTFILE" = X ]; then
     LASTCMD="last"
 else
-    if [ -e $LASTFILE ]; then # Should we also check if the file is readable..?
-        LASTCMD="last -f $LASTFILE"
+    if [ -e "$LASTFILE" ]; then # Should we also check if the file is readable..?
+        LASTCMD="last -f \"$LASTFILE\""
     else
-        echo "Error: $LASTFILE does not exist."
+        echo "Error: \"$LASTFILE\" does not exist."
         exit 1
     fi
 fi
@@ -161,7 +163,22 @@ if [ "$NOLOGIN" = 1 ]; then
     # https://stackoverflow.com/questions/11165182/bash-difference-between-two-lists
     # Compares usernames in /etc/passwd to users that we saw in `last`, and displays items which appear
     # *only* in /etc/passwd (i.e. those who do not have a login entry).
-    comm -23 <(grep "$USERPATTERN" /etc/passwd | awk -F":" '{print $1}' | sort) <(echo "$output" | awk '{print $1}' | sort | uniq)
+    # lastlog | grep "Never logged in" | grep "$USERPATTERN" | awk '{print $1}'
+
+    # We don't use lastlog so that we can compare against the filtered list we already have, instead of filtering again...
+    output="$(comm -23 <(grep "$USERPATTERN" /etc/passwd | awk -F":" '{print $1}' | sort) <(echo "$output" | awk '{print $1}' | sort | uniq))"
+    if [ ! X"$MAPPING" = X ]; then
+        if [ -e "$MAPPING" ]; then
+            for line in `cat "$MAPPING"`; do
+                f_username=$(echo $line | awk -F":" '{print $1}')
+                f_replacement=$(echo $line | awk -F": " '{print $2}')
+
+                output="${output//$f_username/$f_replacement}"
+
+            done
+        fi
+    fi
+    echo "$output"
     exit
 fi
 
@@ -176,7 +193,7 @@ if [ "$SUMMARY" = 1 ]; then
         cur_user=$(echo $line | cut -f1 -d" ")
         login_date=$(echo $line | awk -F" " '{print $5,$6,$7,$8}')
         logout_date=$(echo $line | awk -F" " '{print $11,$12,$13,$14}')
-        if [ $(echo $logout_date | tr -d ' ')  = "in" ]; then
+        if [[ $(echo $logout_date | tr -d ' ')  == *in ]]; then
             logout_date=$(date +%s)
         else
             logout_date=$(date -u -d "$logout_date" +%s)
@@ -197,9 +214,20 @@ if [ "$SUMMARY" = 1 ]; then
     done
 
     #printf "$cur_user: $num_logins logins, total duration of $(date -u -d @$(echo $cur_duration | bc) +%T)\n"
-    output="$output$(printf $FORMAT "$cur_user" "$num_logins" "$(date -u -d @$(echo $cur_duration | bc) +%T)")"$'\n'
+    output="$output$(printf $FORMAT "$tmp_user" "$num_logins" "$(date -u -d @$(echo $cur_duration | bc) +%T)")"$'\n'
 fi
 
+if [ ! X"$MAPPING" = X ]; then
+    if [ -e "$MAPPING" ]; then
+        for line in `cat "$MAPPING"`; do
+            f_username=$(echo $line | awk -F":" '{print $1}')
+            f_replacement=$(echo $line | awk -F": " '{print $2}')
+
+            output="${output//$f_username/$f_replacement}"
+
+        done
+    fi
+fi
 echo "$output"
 
 IFS=$OLDIFS
