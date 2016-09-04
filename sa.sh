@@ -257,15 +257,11 @@ if [ "$SUMMARY" = 1 ]; then
     for line in $last_output; do
         cur_user=$(echo $line | cut -f1 -d" ")
         login_date=$(echo $line | awk -F" - " '{print $1}' | awk -F" " '{print $(NF-3),$(NF-2),$(NF-1),$NF}')
-        
+
         if [[ $(echo $login_date | tr -d ' ') == *in ]]; then
             login_date=$(echo $line | awk -F" " '{print $(NF-6),$(NF-5),$(NF-4),$(NF-3)}')
         fi
 
-        tmp_last_login=$(date -u -d "$login_date" +%s)
-        if [ $tmp_last_login -gt $last_login ]; then
-            last_login=$tmp_last_login
-        fi
 
         logout_date=$(echo $line | awk -F" - " '{print $2}' | awk -F" " '{print $2,$3,$4,$5}')
         #logout_date=$(echo $line | awk -F" " '{print $11,$12,$13,$14}')
@@ -280,8 +276,8 @@ if [ "$SUMMARY" = 1 ]; then
 
         # Find the user's duration for this particular session.
         tmp_duration=$(echo "$logout_date - $login_date" | bc)
-        num_logins=$(expr $num_logins + 1)
 
+        num_logins=$(expr $num_logins + 1)
         if [ "$cur_user" = "$tmp_user" -o "$tmp_user" = "" ]; then
             cur_duration="$tmp_duration + $cur_duration"
         else
@@ -291,8 +287,13 @@ if [ "$SUMMARY" = 1 ]; then
             last_login=0
         fi
         tmp_user=$cur_user
+        tmp_last_login=$(date -u -d @"$login_date" +%s)
+        if [ $tmp_last_login -gt $last_login ]; then
+            last_login=$tmp_last_login
+        fi
     done
-    output="$output$(printf $FORMAT "$tmp_user" "$num_logins" "$(date -u -d @$(echo $cur_duration | bc) +%T)" "$(date -u -d @$last_login)")"$'\n'
+    num_logins=$(expr $num_logins + 1)
+    output="$output$(printf $FORMAT "$cur_user" "$num_logins" "$(date -u -d @$(echo $cur_duration | bc) +%T)" "$(date -u -d @$tmp_last_login)")"$'\n'
 fi
 
 # If the user has specified a mapping file, we should use it before we display the output to the user...
