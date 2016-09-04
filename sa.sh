@@ -2,6 +2,7 @@
 
 # Exit on error.
 set -e
+#set -x
 
 # This function checks to see if the arg passed is an integer.
 is_int () {
@@ -151,7 +152,7 @@ if [ ! X$USERPATTERN = X ]; then
     LASTCMD="$LASTCMD | grep -w \"$USERPATTERN\""
 fi
 
-LASTCMD="$LASTCMD | grep -v \"wtmp.* begins\""
+LASTCMD="$LASTCMD | grep -v \"wtmp.* begins\" | grep -v reboot"
 
 if [ "$ALPHABETICAL" = 1 -o "$SUMMARY" = 1 ]; then
     LASTCMD="$LASTCMD | sort"
@@ -255,11 +256,17 @@ if [ "$SUMMARY" = 1 ]; then
     cur_user=""
     for line in $last_output; do
         cur_user=$(echo $line | cut -f1 -d" ")
-        login_date=$(echo $line | awk -F" " '{print $5,$6,$7,$8}')
-        logout_date=$(echo $line | awk -F" " '{print $11,$12,$13,$14}')
+        login_date=$(echo $line | awk -F" - " '{print $1}' | awk -F" " '{print $(NF-3),$(NF-2),$(NF-1),$NF}')
+        
+        if [[ $(echo $login_date | tr -d ' ') == *in ]]; then
+            login_date=$(echo $line | awk -F" " '{print $(NF-6),$(NF-5),$(NF-4),$(NF-3)}')
+        fi
+
+        logout_date=$(echo $line | awk -F" - " '{print $2}' | awk -F" " '{print $2,$3,$4,$5}')
+        #logout_date=$(echo $line | awk -F" " '{print $11,$12,$13,$14}')
 
         # Basically, convert all timestamps to seconds, for easy comparisons...
-        if [[ $(echo $logout_date | tr -d ' ')  == *in ]]; then # If the user is still logged in,
+        if [[ $(echo $logout_date | tr -d ' ')  == *in ]] || [ X"$(echo $logout_date | tr -d ' ')" = X ]; then # If the user is still logged in,
             logout_date=$(date +%s)                             # default to 'now()'
         else
             logout_date=$(date -u -d "$logout_date" +%s)        # Else, use their logout date.
