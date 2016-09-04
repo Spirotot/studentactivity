@@ -280,10 +280,10 @@ if [ "$SUMMARY" = 1 ]; then
 
         # Find the user's duration for this particular session.
         tmp_duration=$(echo "$logout_date - $login_date" | bc)
+        num_logins=$(expr $num_logins + 1)
 
         if [ "$cur_user" = "$tmp_user" -o "$tmp_user" = "" ]; then
             cur_duration="$tmp_duration + $cur_duration"
-            num_logins=$(expr $num_logins + 1)
         else
             output="$output$(printf $FORMAT "$tmp_user" "$num_logins" "$(date -u -d @$(echo $cur_duration | bc) +%T)" "$(date -u -d @$last_login)")"$'\n'
             cur_duration=$tmp_duration
