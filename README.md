@@ -69,7 +69,8 @@ Fields, Aaron       118            06:40:29
 ```
 
 ## Known Bugs
-* I don't think the cumulative duration is always calculated correctly.
+* I don't think the cumulative duration is always calculated correctly when
+  using the `--summary` option.
 
 ## Future Directions
 * Add option to automatically parse all `wtmp` files in `/var/log`, although
