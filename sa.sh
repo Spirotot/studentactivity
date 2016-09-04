@@ -43,7 +43,7 @@ do
             shift
             ;;
         -t|--timestamp)                 # Display users who were logged in at a given time. See `man last`
-            TIMESTAMP="$2"
+            TIMESTAMP="$2"              # NOT YET IMPLEMENTED
             shift
             ;;
         -m|--mapping)                   # Path to a mapping file which will be used to display an alternate

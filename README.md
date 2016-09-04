@@ -93,6 +93,7 @@ Fields, Aaron       118            07:30:07       Sun Sep  4 08:32:46 UTC 2016
 * Add "groups" feature, where an instructor can specify which students belong to
   him (in a fashion similar to the mapping file), and all other students will be
   filtered out.
+* Implement the `--timestamp` feature (see `sa.sh` source code).
 * This would be a totally different tool/script, but related: it would be
   interesting to create/configure a tool that will automatically log commands
   entered by a user. The `script/scriptreplay` tools come to mind, but it would
