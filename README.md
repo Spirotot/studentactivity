@@ -44,10 +44,42 @@ This file is used to provide a mapping of a friendly human name to a username
 used on the system. It is a plain-text file, and each line should be formatted
 as follows: `[system_name]: [friendly_name]`
 
-Example:
+Example mapping output:
 
 ```
 spirotot: Fields, Aaron
 u123: Jim
 player4: Sam
 ```
+
+Example `sa.sh` output without mapping file:
+
+```
+>$ ./sa.sh -p spirotot --summary
+USER           LOGINS         DURATION      
+spirotot       118            06:40:29 
+```
+
+Example `sa.sh` output with mapping file:
+
+```
+>$ ./sa.sh -p spirotot --summary --mapping map.txt
+USER           LOGINS         DURATION      
+Fields, Aaron       118            06:40:29 
+```
+
+## Known Bugs
+* I don't think the cumulative duration is always calculated correctly.
+
+## Future Directions
+* Add option to automatically parse all `wtmp` files in `/var/log`, although
+  this could be very slow.
+* Add some kind of chart/graph to show login/logout dates/times/durations.
+* Add "groups" feature, where an instructor can specify which students belong to
+  him (in a fashion similar to the mapping file), and all other students will be
+  filtered out.
+* This would be a totally different tool/script, but related: it would be
+  interesting to create/configure a tool that will automatically log commands
+  entered by a user. The `script/scriptreplay` tools come to mind, but it would
+  be interesting to see if timestamps can be pulled from this for
+  graphing/charting purposes.
