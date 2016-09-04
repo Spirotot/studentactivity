@@ -2,7 +2,7 @@
 
 # Exit on error.
 set -e
-
+#set -x
 # This function checks to see if the arg passed is an integer.
 is_int () {
     # https://stackoverflow.com/questions/806906/how-do-i-test-if-a-variable-is-a-number-in-bash
@@ -127,15 +127,15 @@ if [ ! X"$DATESINCE" = X -o ! X"$DATEUNTIL" = X ]; then
 
     # Need to unset -e, since this following last command might fail...
     set +e
-    last --since > /dev/null 2>&1
+    last --since 'yesterday' > /dev/null 2>&1
 
     if [ $? -eq 0 ]; then
         if [ ! X"$DATESINCE" = X ]; then
-            LASTCMD="$LASTCMD --since $DATESINCE"
+            LASTCMD="$LASTCMD --since \"$DATESINCE\""
         fi
 
         if [ ! X"$DATEUNTIL" = X ]; then
-            LASTCMD="$LASTCMD --until $DATEUNTIL"
+            LASTCMD="$LASTCMD --until \"$DATEUNTIL\""
         fi
     else
         LAST_DATE_ACTION=1
@@ -200,15 +200,24 @@ if [ $LAST_DATE_ACTION -eq 1 ]; then
     fi
 
     for line in $lastoutput; do
-        login_date=$(echo $line | awk -F" " '{print $5,$6,$7,$8}')
-        logout_date=$(echo $line | awk -F" " '{print $11,$12,$13,$14}')
-        if [[ $(echo $logout_date | tr -d ' ')  == *in ]]; then
-            logout_date=$(date +%s)
-        else
-            logout_date=$(date -u -d "$logout_date" +%s)
+        login_date=$(echo $line | awk -F" - " '{print $1}' | awk -F" " '{print $(NF-3),$(NF-2),$(NF-1),$NF}')
+
+        if [[ $(echo $login_date | tr -d ' ') == *in ]]; then
+            login_date=$(echo $line | awk -F" " '{print $(NF-6),$(NF-5),$(NF-4),$(NF-3)}')
         fi
 
+
+        logout_date=$(echo $line | awk -F" - " '{print $2}' | awk -F" " '{print $2,$3,$4,$5}')
+        #logout_date=$(echo $line | awk -F" " '{print $11,$12,$13,$14}')
+
+        # Basically, convert all timestamps to seconds, for easy comparisons...
+        if [[ $(echo $logout_date | tr -d ' ')  == *in ]] || [ X"$(echo $logout_date | tr -d ' ')" = X ]; then # If the user is still logged in,
+            logout_date=$(date +%s)                             # default to 'now()'
+        else
+            logout_date=$(date -u -d "$logout_date" +%s)        # Else, use their logout date.
+        fi
         login_date=$(date -u -d "$login_date" +%s)
+
         if [ "$login_date" -ge "$SINCE_SECONDS" -o "$logout_date" -ge "$SINCE_SECONDS" ] && [ "$login_date" -le "$UNTIL_SECONDS" -o "$logout_date" -le "$UNTIL_SECONDS" ]; then
                 output=$output$line$'\n'
         fi
@@ -277,13 +286,13 @@ if [ "$SUMMARY" = 1 ]; then
         # Find the user's duration for this particular session.
         tmp_duration=$(echo "$logout_date - $login_date" | bc)
 
-        num_logins=$(expr $num_logins + 1)
         if [ "$cur_user" = "$tmp_user" -o "$tmp_user" = "" ]; then
             cur_duration="$tmp_duration + $cur_duration"
+            num_logins=$(expr $num_logins + 1)
         else
             output="$output$(printf $FORMAT "$tmp_user" "$num_logins" "$(date -u -d @$(echo $cur_duration | bc) +%T)" "$(date -u -d @$last_login)")"$'\n'
             cur_duration=$tmp_duration
-            num_logins=0
+            num_logins=1
             last_login=0
         fi
         tmp_user=$cur_user
@@ -292,8 +301,7 @@ if [ "$SUMMARY" = 1 ]; then
             last_login=$tmp_last_login
         fi
     done
-    num_logins=$(expr $num_logins + 1)
-    output="$output$(printf $FORMAT "$cur_user" "$num_logins" "$(date -u -d @$(echo $cur_duration | bc) +%T)" "$(date -u -d @$tmp_last_login)")"$'\n'
+    output="$output$(printf $FORMAT "$cur_user" "$num_logins" "$(date -u -d @$(echo $cur_duration | bc) +%T)" "$(date -u -d @$last_login)")"$'\n'
 fi
 
 # If the user has specified a mapping file, we should use it before we display the output to the user...
