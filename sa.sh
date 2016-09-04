@@ -2,7 +2,6 @@
 
 # Exit on error.
 set -e
-#set -x
 
 # This function checks to see if the arg passed is an integer.
 is_int () {
@@ -249,10 +248,11 @@ fi
 # If the user wants the summary view...
 if [ "$SUMMARY" = 1 ]; then
     last_output=$output
-    FORMAT="%-14s %-14s %-14s"
-    output=$(printf "$FORMAT" "USER" "LOGINS" "DURATION")$'\n'
+    FORMAT="%-14s %-14s %-14s %-14s"
+    output=$(printf "$FORMAT" "USER" "LOGINS" "DURATION" "LAST_LOGIN")$'\n'
     cur_duration=0
     num_logins=0
+    last_login=0
     cur_user=""
     for line in $last_output; do
         cur_user=$(echo $line | cut -f1 -d" ")
@@ -260,6 +260,11 @@ if [ "$SUMMARY" = 1 ]; then
         
         if [[ $(echo $login_date | tr -d ' ') == *in ]]; then
             login_date=$(echo $line | awk -F" " '{print $(NF-6),$(NF-5),$(NF-4),$(NF-3)}')
+        fi
+
+        tmp_last_login=$(date -u -d "$login_date" +%s)
+        if [ $tmp_last_login -gt $last_login ]; then
+            last_login=$tmp_last_login
         fi
 
         logout_date=$(echo $line | awk -F" - " '{print $2}' | awk -F" " '{print $2,$3,$4,$5}')
@@ -280,14 +285,14 @@ if [ "$SUMMARY" = 1 ]; then
             cur_duration="$tmp_duration + $cur_duration"
             num_logins=$(expr $num_logins + 1)
         else
-            output="$output$(printf $FORMAT "$tmp_user" "$num_logins" "$(date -u -d @$(echo $cur_duration | bc) +%T)")"$'\n'
+            output="$output$(printf $FORMAT "$tmp_user" "$num_logins" "$(date -u -d @$(echo $cur_duration | bc) +%T)" "$(date -u -d @$last_login)")"$'\n'
             cur_duration=$tmp_duration
             num_logins=0
+            last_login=0
         fi
         tmp_user=$cur_user
     done
-
-    output="$output$(printf $FORMAT "$tmp_user" "$num_logins" "$(date -u -d @$(echo $cur_duration | bc) +%T)")"$'\n'
+    output="$output$(printf $FORMAT "$tmp_user" "$num_logins" "$(date -u -d @$(echo $cur_duration | bc) +%T)" "$(date -u -d @$last_login)")"$'\n'
 fi
 
 # If the user has specified a mapping file, we should use it before we display the output to the user...

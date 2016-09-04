@@ -1,10 +1,19 @@
 # Student Activity
 
-## Overview
+## Overview/Requirements
 
 `sa.sh` ("sa" == "Student Activity") is a script that wraps the `last` command
 with some additional functionality and user-friendliness. Namely, it provides
 filtering options for searching/reducing the output of the `last` command.
+
+This script was designed with these minimum requirements in mind:
+* Show number of times a given user has logged in.
+* Show the cumulative duration of a user's sessions.
+* Ability to show who has not logged in.
+* Filtering capabilities
+    * Wildcards
+    * Numerical sequences (i.e. u01 - u25)
+    * By period/time (i.e. since August 20 until yesterday)
 
 ## Usage
 
@@ -56,21 +65,26 @@ Example `sa.sh` output without mapping file:
 
 ```
 >$ ./sa.sh -p spirotot --summary
-USER           LOGINS         DURATION      
-spirotot       118            06:40:29 
+USER           LOGINS         DURATION       LAST_LOGIN    
+spirotot       118            07:30:07       Sun Sep  4 08:32:46 UTC 2016
 ```
 
 Example `sa.sh` output with mapping file:
 
 ```
 >$ ./sa.sh -p spirotot --summary --mapping map.txt
-USER           LOGINS         DURATION      
-Fields, Aaron       118            06:40:29 
+USER           LOGINS         DURATION       LAST_LOGIN    
+Fields, Aaron       118            07:30:07       Sun Sep  4 08:32:46 UTC 2016
 ```
 
 ## Known Bugs
 * I don't think the cumulative duration is always calculated correctly when
   using the `--summary` option.
+* The `--summary` option currently does not print the range of dates for which
+  it is displaying output. This can be confusing when using in conjunction with
+  the `--file` flag, as the `LAST_LOGIN` column will *not* show the user's
+  actual last login, but instead the last login contained in the wtmp file
+  specified.
 
 ## Future Directions
 * Add option to automatically parse all `wtmp` files in `/var/log`, although
